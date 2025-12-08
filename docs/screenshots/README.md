@@ -24,28 +24,3 @@ This folder contains screenshots and diagrams for the Privileged Account Securit
 Click **"Commit new file"**
 
 ---
-
-## Project 3: `identity-infrastructure-as-code`
-
-### Step 1: Create the repo on GitHub
-```
-Repository name:    identity-infrastructure-as-code
-Description:        Infrastructure as Code for Microsoft Entra ID using Terraform and GitHub Actions CI/CD. Reduced identity misconfigurations by 70%.
-Add README:         ❌ Don't check
-License:            MIT (optional)
-```
-
-### Step 2: Upload these files/folders from `project3-lead-it-helpdesk/`:
-```
-README.md
-terraform/
-github-actions/
-```
-
-### Step 3: After uploading, add the docs folder manually
-
-Click **"Add file"** → **"Create new file"**
-
-Type this filename:
-```
-docs/screenshots/README.md
