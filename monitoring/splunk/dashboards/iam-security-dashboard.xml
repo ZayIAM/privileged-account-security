@@ -1,0 +1,338 @@
+<dashboard version="1.1" theme="dark">
+  <label>IAM Security Operations Dashboard</label>
+  <description>Unified Identity and Access Management monitoring across CyberArk, Okta, Entra ID, and Active Directory</description>
+  
+  <!-- Dashboard Header -->
+  <row>
+    <panel>
+      <title>Dashboard Overview</title>
+      <html>
+        <div style="padding: 20px; text-align: center;">
+          <h1 style="color: #00a4ef;">Identity &amp; Access Management Dashboard</h1>
+          <p style="color: #888;">Real-time monitoring of authentication, privileged access, and identity lifecycle events</p>
+          <p style="color: #666; font-size: 12px;">Author: Isaiah Herard | Last Updated: 2024</p>
+        </div>
+      </html>
+    </panel>
+  </row>
+
+  <!-- KPI Row -->
+  <row>
+    <panel>
+      <title>Authentication Uptime (24h)</title>
+      <single>
+        <search>
+          <query>
+            index=okta sourcetype=OktaIM2:log 
+            | stats count as total, count(eval(outcome.result="SUCCESS")) as success 
+            | eval uptime=round((success/total)*100, 2) 
+            | table uptime
+          </query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="colorBy">value</option>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0xdc4e41","0xf1813f","0x53a051"]</option>
+        <option name="rangeValues">[95,99]</option>
+        <option name="unit">%</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+    <panel>
+      <title>Active Privileged Sessions</title>
+      <single>
+        <search>
+          <query>
+            index=cyberark sourcetype=cyberark:pta action=connect status=active 
+            | stats dc(session_id) as active_sessions
+          </query>
+          <earliest>-1h@h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="colorBy">value</option>
+        <option name="colorMode">none</option>
+        <option name="drilldown">all</option>
+        <option name="useColors">0</option>
+      </single>
+    </panel>
+    <panel>
+      <title>Failed Logins (24h)</title>
+      <single>
+        <search>
+          <query>
+            index=okta OR index=azure_ad 
+            (sourcetype=OktaIM2:log outcome.result=FAILURE) OR 
+            (sourcetype=azure:aad:signin ResultType!=0) 
+            | stats count
+          </query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="colorBy">value</option>
+        <option name="colorMode">block</option>
+        <option name="drilldown">all</option>
+        <option name="rangeColors">["0x53a051","0xf1813f","0xdc4e41"]</option>
+        <option name="rangeValues">[50,200]</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+    <panel>
+      <title>Password Rotations Today</title>
+      <single>
+        <search>
+          <query>
+            index=cyberark sourcetype=cyberark:vault action="Password Change" 
+            | stats count
+          </query>
+          <earliest>@d</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="colorBy">value</option>
+        <option name="colorMode">none</option>
+        <option name="drilldown">none</option>
+      </single>
+    </panel>
+    <panel>
+      <title>Conditional Access Blocks (24h)</title>
+      <single>
+        <search>
+          <query>
+            index=azure_ad sourcetype=azure:aad:signin 
+            ConditionalAccessStatus=failure 
+            | stats count
+          </query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="colorBy">value</option>
+        <option name="colorMode">block</option>
+        <option name="drilldown">all</option>
+        <option name="rangeColors">["0x53a051","0xf1813f","0xdc4e41"]</option>
+        <option name="rangeValues">[10,50]</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+  </row>
+
+  <!-- Authentication Trends -->
+  <row>
+    <panel>
+      <title>Authentication Events - Last 24 Hours</title>
+      <chart>
+        <search>
+          <query>
+            index=okta sourcetype=OktaIM2:log eventType=user.session.start 
+            | timechart span=1h count by outcome.result
+          </query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="charting.chart">area</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.legend.placement">bottom</option>
+        <option name="charting.chart.nullValueMode">zero</option>
+      </chart>
+    </panel>
+    <panel>
+      <title>MFA Usage by Method</title>
+      <chart>
+        <search>
+          <query>
+            index=okta sourcetype=OktaIM2:log eventType=user.authentication.auth_via_mfa 
+            | stats count by authenticationContext.authenticationProvider 
+            | sort -count
+          </query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="charting.chart">pie</option>
+        <option name="charting.drilldown">all</option>
+      </chart>
+    </panel>
+  </row>
+
+  <!-- Privileged Access Monitoring -->
+  <row>
+    <panel>
+      <title>CyberArk Privileged Sessions - Last 7 Days</title>
+      <chart>
+        <search>
+          <query>
+            index=cyberark sourcetype=cyberark:pta 
+            | timechart span=1d count by action
+          </query>
+          <earliest>-7d@d</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.legend.placement">right</option>
+      </chart>
+    </panel>
+    <panel>
+      <title>Top 10 Privileged Account Usage</title>
+      <table>
+        <search>
+          <query>
+            index=cyberark sourcetype=cyberark:vault action="Retrieve Password" 
+            | stats count as "Access Count" by AccountName, Safe 
+            | sort -"Access Count" 
+            | head 10
+          </query>
+          <earliest>-7d@d</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="count">10</option>
+        <option name="drilldown">row</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+  </row>
+
+  <!-- Risk and Anomaly Detection -->
+  <row>
+    <panel>
+      <title>High Risk Sign-ins - Entra ID</title>
+      <table>
+        <search>
+          <query>
+            index=azure_ad sourcetype=azure:aad:signin RiskLevel IN ("high", "medium") 
+            | table _time, UserPrincipalName, IPAddress, Location, RiskLevel, RiskState, AppDisplayName 
+            | sort -_time 
+            | head 20
+          </query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="count">10</option>
+        <option name="drilldown">row</option>
+        <option name="wrap">true</option>
+        <format type="color" field="RiskLevel">
+          <colorPalette type="map">{"high":#DC4E41,"medium":#F1813F}</colorPalette>
+        </format>
+      </table>
+    </panel>
+  </row>
+
+  <!-- Identity Lifecycle Events -->
+  <row>
+    <panel>
+      <title>User Lifecycle Events - Last 7 Days</title>
+      <chart>
+        <search>
+          <query>
+            index=okta sourcetype=OktaIM2:log 
+            eventType IN ("user.lifecycle.create", "user.lifecycle.activate", "user.lifecycle.suspend", "user.lifecycle.deactivate") 
+            | timechart span=1d count by eventType
+          </query>
+          <earliest>-7d@d</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="charting.chart">line</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.legend.placement">bottom</option>
+      </chart>
+    </panel>
+    <panel>
+      <title>Recent User Provisioning Events</title>
+      <table>
+        <search>
+          <query>
+            index=okta sourcetype=OktaIM2:log eventType=user.lifecycle.create 
+            | table _time, actor.displayName, target{}.displayName, target{}.alternateId, outcome.result 
+            | rename actor.displayName as "Created By", target{}.displayName as "New User", target{}.alternateId as "Email" 
+            | sort -_time 
+            | head 10
+          </query>
+          <earliest>-7d@d</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="count">10</option>
+        <option name="drilldown">row</option>
+      </table>
+    </panel>
+  </row>
+
+  <!-- Active Directory Monitoring -->
+  <row>
+    <panel>
+      <title>AD Account Lockouts - Last 24 Hours</title>
+      <table>
+        <search>
+          <query>
+            index=wineventlog sourcetype=WinEventLog:Security EventCode=4740 
+            | table _time, TargetUserName, TargetDomainName, SubjectUserName, ComputerName 
+            | rename TargetUserName as "Locked Account", TargetDomainName as "Domain", ComputerName as "Source" 
+            | sort -_time
+          </query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="count">10</option>
+        <option name="drilldown">row</option>
+      </table>
+    </panel>
+    <panel>
+      <title>Privileged Group Changes</title>
+      <table>
+        <search>
+          <query>
+            index=wineventlog sourcetype=WinEventLog:Security EventCode IN (4728, 4729, 4732, 4733, 4756, 4757) 
+            TargetUserName IN ("Domain Admins", "Enterprise Admins", "Schema Admins", "Administrators") 
+            | table _time, EventCode, MemberName, TargetUserName, SubjectUserName 
+            | sort -_time 
+            | head 10
+          </query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="count">10</option>
+        <option name="drilldown">row</option>
+      </table>
+    </panel>
+  </row>
+
+  <!-- Application Access Insights -->
+  <row>
+    <panel>
+      <title>Top Applications by Login Volume</title>
+      <chart>
+        <search>
+          <query>
+            index=okta sourcetype=OktaIM2:log eventType=user.authentication.sso 
+            | stats count by target{}.displayName 
+            | sort -count 
+            | head 10
+          </query>
+          <earliest>-7d@d</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="charting.chart">bar</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.legend.placement">none</option>
+      </chart>
+    </panel>
+    <panel>
+      <title>Application Access Failures</title>
+      <table>
+        <search>
+          <query>
+            index=okta sourcetype=OktaIM2:log eventType=app.user.sso.denied 
+            | stats count by target{}.displayName, actor.displayName, outcome.reason 
+            | sort -count 
+            | head 10
+          </query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="count">10</option>
+        <option name="drilldown">row</option>
+      </table>
+    </panel>
+  </row>
+
+</dashboard>
